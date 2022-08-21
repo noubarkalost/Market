@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { AppService } from '../app.service';
+import {Component, OnInit } from '@angular/core';
 import { Breakpoints, BreakpointObserver } from '@angular/cdk/layout';
 
 @Component({
@@ -7,27 +9,47 @@ import { Breakpoints, BreakpointObserver } from '@angular/cdk/layout';
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css']
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit{
   /** Based on the screen size, switch from standard to one column per row */
-  cards = this.breakpointObserver.observe(Breakpoints.Handset).pipe(
+  cards = [];
+  cardsForHandset= [];
+  cardsForWeb = [];
+  isHandset: boolean = false;
+  isHandsetObserver: Observable<boolean>= this.breakpointObserver.observe(Breakpoints.Handset).pipe(
     map(({ matches }) => {
       if (matches) {
-        return [
-          { title: 'Card 1', cols: 1, rows: 1 },
-          { title: 'Card 2', cols: 1, rows: 1 },
-          { title: 'Card 3', cols: 1, rows: 1 },
-          { title: 'Card 4', cols: 1, rows: 1 }
-        ];
+        return true
       }
 
-      return [
-        { title: 'Card 1', cols: 2, rows: 1 },
-        { title: 'Card 2', cols: 1, rows: 1 },
-        { title: 'Card 3', cols: 1, rows: 2 },
-        { title: 'Card 4', cols: 1, rows: 1 }
-      ];
+      return false
     })
   );
 
-  constructor(private breakpointObserver: BreakpointObserver) {}
+  constructor(
+    private breakpointObserver: BreakpointObserver,
+    public appService: AppService
+
+  ) {}
+
+  ngOnInit() {
+    this.isHandsetObserver.subscribe(currentObserverValue => {
+      this.isHandset = currentObserverValue;
+    })
+    this.loadCards()
+    this.appService.getDeals().subscribe( response => {
+      this.cardsForHandset = response.handsetCards;
+      this.cardsForWeb = response.webCards;
+      this.loadCards()
+    }, error => {
+      alert("There was an error retrieving data from server, please try again!")
+    })
+  }
+
+  loadCards() {
+    this.cards = this.isHandset ? this.cardsForHandset : this.cardsForWeb
+  }
+
+  getImage(imageName: string) {
+    return 'url(' + "http://localhost:3000/images/" + imageName + '.jpeg' + ')'
+  }
 }
